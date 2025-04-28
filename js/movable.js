@@ -1,12 +1,18 @@
 class Mover {
-    static boundElements = new Set();
-    static selectedElements = new Set();
-    static grabbedElement = null;
-    static dimensions = new Map();
-    static parentRect = new Map();
-    static zOrder = [];
+    /*
+    A class 
+    */
+    static boundElements = new Set();           // All elements sent to the class with bind()
+    static selectedElements = new Set();        // Bound elements which have been double-clicked, and can be moved with the arrow keys
+    static grabbedElement = null;               // The element which the user has currently "grabbed" with the cursor
+    static dimensions = new Map();              // Width and height of all bound elements
+    static parentRect = new Map();              // Positions of the corners of each bound element's parent element
+    static zOrder = [];                         // Defines in which order bound elements are stacked on top of each other, changes when an object is clicked and should thus jump to the surface
     
     static arrowKeys = {
+        /*
+        Maps MouseEvent key values to shorthand words
+        */
         ArrowLeft:  "left",
         ArrowRight: "right",
         ArrowUp:    "up",
@@ -14,6 +20,10 @@ class Mover {
     }
 
     static keysDown = {
+        /*
+        Holds Boolean values that indicate whether
+        each arrow key is pressed or not
+        */
         ArrowLeft:  false,
         ArrowRight: false,
         ArrowUp:    false,
@@ -37,13 +47,13 @@ class Mover {
     static place(element, X, Y) {
         /*
         Places an element such that its center is at the point (X, Y), 
-        UNLESS this places it off the bounds of its parent element, 
+        unless this places it off the bounds of its parent element, 
         in which case the element is placed next to the edge without
         crossing it.
         */
         if (Mover.boundElements.has(element)) {
-            const dims = Mover.dimensions.get(element);                        // Width and height of element
-            const parentRect = Mover.parentRect.get(element);    // Rectangle of the parent element
+            const dims = Mover.dimensions.get(element);         // Width and height of element
+            const parentRect = Mover.parentRect.get(element);   // Rectangle of the parent element
 
             /*
             Set horizontal position
@@ -98,12 +108,29 @@ class Mover {
     }
 
     static move(element, direction) {
+        /*
+        A function which takes an element and a direction and begins
+        to move in the specified direction (left, right, up or down)
+        at a rate of about 143px/s. This keeps up as long as the 
+        relevant arrow key is pressed down.
+
+        When the function is called, a function move() is created
+        which moves the element 1px in the indicated direction, and
+        then, after some number of milliseconds, if the arrow key
+        that initiated the function is still pressed, the function 
+        is called again. This thus repeats until the key is released.
+        */
         const dims = Mover.dimensions.get(element);
-        let move;
+        let move;                   // To be assigned depending on the direction
         if (direction === "left") {
             move = () => {
+                /*
+                The position of the element at the n-th time the function 
+                is called needs to be used, rather than just that at 
+                the first call
+                */
                 const rect = element.getBoundingClientRect();
-                Mover.place(element, rect.left + dims[0]/2 - 1, rect.top + dims[1]/2);
+                Mover.place(element, rect.left + dims[0]/2 - 1, rect.top + dims[1]/2);  // Move left
                 if (Mover.keysDown["ArrowLeft"]) {
                     setTimeout(move, 7);
                 }
@@ -111,7 +138,7 @@ class Mover {
         } else if (direction === "right") {
             move = () => {
                 const rect = element.getBoundingClientRect();
-                Mover.place(element, rect.left + dims[0]/2 + 1, rect.top + dims[1]/2);
+                Mover.place(element, rect.left + dims[0]/2 + 1, rect.top + dims[1]/2);  // Move right
                 if (Mover.keysDown["ArrowRight"]) {
                     setTimeout(move, 7);
                 }
@@ -119,7 +146,7 @@ class Mover {
         } else if (direction === "up") {
             move = () => {
                 const rect = element.getBoundingClientRect();
-                Mover.place(element, rect.left + dims[0]/2, rect.top + dims[1]/2 - 1);
+                Mover.place(element, rect.left + dims[0]/2, rect.top + dims[1]/2 - 1);  // Move up
                 if (Mover.keysDown["ArrowUp"]) {
                     setTimeout(move, 7);
                 }
@@ -127,16 +154,24 @@ class Mover {
         } else if (direction === "down") {
             move = () => {
                 const rect = element.getBoundingClientRect();
-                Mover.place(element, rect.left + dims[0]/2, rect.top + dims[1]/2 + 1);
+                Mover.place(element, rect.left + dims[0]/2, rect.top + dims[1]/2 + 1);  // Move down
                 if (Mover.keysDown["ArrowDown"]) {
                     setTimeout(move, 7);
                 }
             }
         }
+        /*
+        Call the function after it has been defined
+        */
         move();
     }
 
     static jump(element, direction) {
+        /*
+        A functions which takes an element and a direction, and immediately 
+        moves it to either the left, right, top or bottom edge of its 
+        parent element.
+        */
         const rect = element.getBoundingClientRect();
         const dims = Mover.dimensions.get(element);
         const parentRect = Mover.parentRect.get(element);
@@ -157,6 +192,12 @@ class Mover {
     }
 
     static mouseDownListener = event => {
+        /*
+        If the left mouse button is clicked, and if the 
+        target of the event is a bound element, it
+        means it should be grabbed, and thus be made to
+        move with the cursor.
+        */
         if (event.button === 0) {
             if (Mover.boundElements.has(event.target)) {
                 Mover.grabbedElement = event.target;
@@ -167,6 +208,11 @@ class Mover {
     };
 
     static mouseMoveListener = event => {
+        /*
+        If an element is grabbed, it follows the cursor, while staying
+        inside its parent element - that detail is taken care of by the function 
+        place()
+        */
         if (Mover.grabbedElement) {
             const elementRect = Mover.grabbedElement.getBoundingClientRect
             Mover.place(Mover.grabbedElement, event.clientX, event.clientY);
@@ -174,22 +220,44 @@ class Mover {
     }
 
     static mouseUpListener = event => {
+        /*
+        When the mouse button is released, any grabbed element is dropped
+        at its current position (it simply stops following the cursor)
+        */
         if (event.button === 0) {
             Mover.grabbedElement = null;
         }
     };
 
     static dblClickListener = event => {
-        if (Mover.selectedElements.has(event.target)) {
-            Mover.selectedElements.delete(event.target);
-            event.target.style.border = "1px solid black";
-        } else {
-            Mover.selectedElements.add(event.target);
-            event.target.style.border = "2px dashed black";
+        /*
+        If a double-clicked element is bound, and it is not selected,
+        it is selected; if it is already selected, it is un-selected
+        */
+        if (Mover.boundElements.has(event.target)) {
+            if (Mover.selectedElements.has(event.target)) {
+                Mover.selectedElements.delete(event.target);
+                event.target.style.border = "1px solid black";
+            } else {
+                Mover.selectedElements.add(event.target);
+                event.target.style.border = "2px dashed black";
+            }
         }
     }
 
     static keyDownListener = event => {
+        /*
+        If keydown event involving an arrow key is registered,
+        and it is not already registered by the class as "down"
+        (in the keysDown object), all selected elements are 
+        told to move.
+
+        If the Control button is down when the arrow key is pressed,
+        each element jumps to the edge;
+
+        If not, the elements start to move linearly in the 
+        indicated direction.
+        */
         if (Object.keys(Mover.keysDown).includes(event.key)) {
             if (!Mover.keysDown[event.key]) {
                 Mover.keysDown[event.key] = true;
@@ -207,6 +275,13 @@ class Mover {
     }
 
     static keyUpListener = event => {
+        /*
+        As the motion of the selected objects is maintained by
+        the Boolean values in the keysDown object, releasing 
+        an arrow key can then set the corresponding keysDown property
+        equal to false, and thus the motion of the selected
+        objects will stop.
+        */
         if (Object.keys(Mover.keysDown).includes(event.key)) {
             if (Mover.keysDown[event.key]) {
                 Mover.keysDown[event.key] = false;
@@ -215,6 +290,15 @@ class Mover {
     }
 
     static bind(element) {
+        /*
+        Registers an element to the Mover class, i.e. adding it to 
+        boundElements, recording its width and height and its parent's 
+        position, and also giving it a z-index such that it appears above
+        elements registered earlier. Event listeners for mousedown and
+        double-click are added, and if the element is the first to be 
+        registered, event listeners are also added to the window for 
+        keyboard events, movement of the mouse and mouseup.
+        */
         if (!Mover.boundElements.has(element)) {
             Mover.boundElements.add(element);
 
@@ -237,6 +321,9 @@ class Mover {
     }
 
     static release(element) {
+        /*
+        Essentially undoes everything that bind() does - see bind() above.
+        */
         if (Mover.boundElements.has(element)) {
             Mover.boundElements.delete(element);
             Mover.selectedElements.delete(element);

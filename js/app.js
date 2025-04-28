@@ -1,3 +1,11 @@
+/*
+A div element with id play-area is defined, onto which elements may
+be placed. The elements are then bound to the class "Mover", defined in
+movable.js (in this same directory), which allows the user to 
+move the elements with the cursor, or select them and move them about using
+the arrow keys.
+*/
+
 const playArea = document.getElementById("play-area");
 
 function randomInt(min, max) {
